@@ -1,0 +1,705 @@
+:root {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: #f5f6fb;
+  color: #1c1c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f6fb;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 16px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo-button {
+  border: none;
+  background: #f6d43b;
+  color: #1c1c1c;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.header-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-link {
+  border: none;
+  background: transparent;
+  color: #6d6d7a;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav-link:hover {
+  color: #1c1c1c;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f6d43b;
+  color: #1c1c1c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.avatar.small {
+  width: 32px;
+  height: 32px;
+  font-size: 0.9rem;
+}
+
+.avatar.large {
+  width: 64px;
+  height: 64px;
+  font-size: 1.4rem;
+}
+
+.ghost-button {
+  border: 1px solid #d8dae5;
+  background: #fff;
+  color: #1c1c1c;
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ghost-button:hover {
+  border-color: #f6d43b;
+}
+
+.ghost-button.danger {
+  color: #c62828;
+  border-color: #ffc7c7;
+}
+
+.ghost-button.tiny {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.primary-button {
+  background: #f6d43b;
+  color: #1c1c1c;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-button:hover {
+  opacity: 0.9;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px 80px;
+}
+
+.page-section {
+  max-width: 860px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.page-section.narrow {
+  max-width: 540px;
+}
+
+.auth-page,
+.landing-page {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-card,
+.landing-card,
+.profile-card,
+.composer-card,
+.post-card,
+.search-results > *,
+.comments-section {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+  padding: 24px;
+}
+
+.landing-card {
+  text-align: center;
+  max-width: 480px;
+}
+
+.landing-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  color: #6d6d7a;
+}
+
+.field input,
+.field textarea {
+  border: 1px solid #e2e4f0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: none;
+}
+
+.auth-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.post-header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.post-content {
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+.post-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.icon-button {
+  border: none;
+  background: #fff8d6;
+  color: #1c1c1c;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.icon-button.active {
+  background: #f6d43b;
+}
+
+.comments-section {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.comments-section.hidden {
+  display: none;
+}
+
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.comment-row {
+  display: flex;
+  gap: 12px;
+}
+
+.comment-body {
+  background: #f7f8fc;
+  border-radius: 16px;
+  padding: 12px;
+  flex: 1;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.comment-form {
+  display: flex;
+  gap: 12px;
+}
+
+.comment-form input {
+  flex: 1;
+  border: 1px solid #e2e4f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.profile-card {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.composer-card form .right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.muted {
+  color: #6d6d7a;
+}
+
+.error-text {
+  color: #c62828;
+}
+
+.success-text {
+  color: #2e7d32;
+}
+
+.hidden {
+  display: none;
+}
+
+.search-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-form input[name='query'] {
+  flex: 1;
+  min-width: 200px;
+  border: 1px solid #e2e4f0;
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+
+.search-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 8px;
+}
+
+.toggle-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f7f8fc;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.user-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-result {
+  border: 1px solid #e2e4f0;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: left;
+  background: #fff;
+  cursor: pointer;
+}
+
+.landing-card h1 {
+  font-size: 2.8rem;
+  margin-bottom: 12px;
+}
+
+.landing-card p {
+  color: #6d6d7a;
+}
+
+.auth-logo {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.auth-logo img {
+  max-width: 120px;
+  max-height: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.auth-card h1 {
+  text-align: center;
+}
+
+.page-section > h1 {
+  font-size: 2rem;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .header-left,
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auth-card,
+  .landing-card,
+  .profile-card,
+  .composer-card,
+  .post-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .field input,
+  .field textarea {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .ghost-button,
+  .primary-button {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+
+  .avatar.small {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+
+  .avatar.large {
+    width: 56px;
+    height: 56px;
+    font-size: 1.2rem;
+  }
+
+  .post-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .post-header-info {
+    width: 100%;
+  }
+
+  .post-content {
+    font-size: 0.9rem;
+  }
+
+  .post-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .icon-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .comment-form input {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .profile-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .profile-info {
+    width: 100%;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .composer-card form .right {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .composer-card form .right button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .field input,
+  .field textarea {
+    padding: 10px 14px;
+    font-size: 1rem;
+  }
+
+  .ghost-button,
+  .primary-button {
+    padding: 8px 16px;
+    font-size: 1rem;
+  }
+
+  .avatar.small {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .avatar.large {
+    width: 64px;
+    height: 64px;
+    font-size: 1.4rem;
+  }
+
+  .post-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .post-header-info {
+    width: auto;
+  }
+
+  .post-content {
+    font-size: 1rem;
+  }
+
+  .post-actions {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .icon-button {
+    width: auto;
+    justify-content: center;
+  }
+
+  .comment-form input {
+    padding: 10px 14px;
+    font-size: 1rem;
+  }
+
+  .profile-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .profile-info {
+    width: auto;
+  }
+
+  .profile-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .composer-card form .right {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .composer-card form .right button {
+    width: auto;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .field input,
+  .field textarea {
+    padding: 12px 16px;
+    font-size: 1.1rem;
+  }
+
+  .ghost-button,
+  .primary-button {
+    padding: 10px 20px;
+    font-size: 1.1rem;
+  }
+
+  .avatar.small {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .avatar.large {
+    width: 72px;
+    height: 72px;
+    font-size: 1.6rem;
+  }
+
+  .post-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .post-header-info {
+    width: auto;
+  }
+
+  .post-content {
+    font-size: 1.1rem;
+  }
+
+  .post-actions {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .icon-button {
+    width: auto;
+    justify-content: center;
+  }
+
+  .comment-form input {
+    padding: 12px 16px;
+    font-size: 1.1rem;
+  }
+
+  .profile-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .profile-info {
+    width: auto;
+  }
+
+  .profile-actions {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .composer-card form .right {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .composer-card form .right button {
+    width: auto;
+  }
+}
+

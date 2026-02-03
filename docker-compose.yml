@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: t-news-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tnews
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: t-news-backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tnews
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      NODE_ENV: production
+      SEED_DB: ${SEED_DB:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    container_name: t-news-frontend
+    ports:
+      - "4173:80"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
