@@ -3,9 +3,9 @@ set -e
 
 echo "Starting application..."
 
-# Применяем миграции
-echo "Applying database migrations..."
-npx prisma migrate deploy
+# Миграции Prisma отключены (используются Go миграции через db-migrate)
+# echo "Applying database migrations..."
+# npx prisma migrate deploy
 
 # Проверяем, нужно ли запускать seed
 if [ "$SEED_DB" = "true" ] || [ "$SEED_DB" = "1" ]; then

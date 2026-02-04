@@ -40,6 +40,31 @@ coverage/
 # Note: Keep migrations, but ignore generated client
 # prisma/migrations/ should be committed
 
+# Go
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.out
+coverage.html
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Profiling
+*.prof
+
 # Docker
 .dockerignore
 
