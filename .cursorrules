@@ -1,0 +1,87 @@
+# Cursor Rules for Tinker Project
+
+## Code Changes and Docker Compose
+
+When you modify code that runs through docker-compose, you MUST restart the affected services:
+
+1. **Backend changes** (Go backend in `backend/` directory):
+   - After modifying any `.go` files in `backend/`, run: `docker-compose restart backend2`
+   - Wait for the service to be healthy before proceeding
+
+2. **Server changes** (NestJS server in `server/` directory):
+   - After modifying any `.ts` files in `server/src/`, run: `docker-compose restart backend`
+   - Wait for the service to be healthy before proceeding
+
+3. **Frontend changes** (in `frontend/` directory):
+   - After modifying frontend code, run: `docker-compose restart frontend`
+   - Wait for the service to be healthy before proceeding
+
+4. **Database migrations** (in `backend/migrations/` or `server/prisma/migrations/`):
+   - After adding/modifying migrations, run: `docker-compose up db-migrate`
+   - Then restart affected backend services
+
+## Endpoint Testing
+
+When you fix or modify API endpoints, you MUST verify their functionality using curl:
+
+### Backend (Go) - Port 3001
+- Base URL: `http://localhost:3001/api`
+- Health check: `curl http://localhost:3001/health`
+- Auth endpoints:
+  - Login: `curl -X POST http://localhost:3001/api/auth/login -H "Content-Type: application/json" -d '{"username":"testuser","password":"testpass"}'`
+- Public endpoints:
+  - Get all posts: `curl http://localhost:3001/api/posts`
+  - Get all users: `curl http://localhost:3001/api/users`
+  - Search: `curl "http://localhost:3001/api/search?query=test&type=users"`
+- Protected endpoints (require Bearer token):
+  - Feed: `curl http://localhost:3001/api/feed -H "Authorization: Bearer <token>"`
+  - Create post: `curl -X POST http://localhost:3001/api/users/<userId>/posts -H "Authorization: Bearer <token>" -H "Content-Type: application/json" -d '{"content":"test"}'`
+
+### Server (NestJS) - Port 3000
+- Base URL: `http://localhost:3000/api`
+- Health check: Check if service is running via docker logs
+- Auth endpoints:
+  - Login: `curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"username":"testuser","password":"testpass"}'`
+- Public endpoints:
+  - Get all posts: `curl http://localhost:3000/api/posts`
+  - Search: `curl "http://localhost:3000/api/search?query=test&type=users"`
+- Protected endpoints (require Bearer token):
+  - Feed: `curl http://localhost:3000/api/feed -H "Authorization: Bearer <token>"`
+
+## Verification Workflow
+
+After making changes:
+
+1. **If you modified backend/server code:**
+   - Restart the appropriate docker-compose service
+   - Wait 10-15 seconds for the service to start
+   - Check service health: `docker-compose ps`
+   - Test health endpoint: `curl http://localhost:3001/health` or check logs: `docker-compose logs backend2` / `docker-compose logs backend`
+
+2. **If you modified API endpoints (handlers/controllers):**
+   - First ensure the service is running (restart if needed)
+   - Test the modified endpoint with curl
+   - Verify the response status code and structure
+   - For protected endpoints, first get a token via login endpoint
+
+3. **If you modified database schema or migrations:**
+   - Run migrations: `docker-compose up db-migrate`
+   - Restart backend services
+   - Verify database connection by testing a simple endpoint
+
+## Testing Strategy
+
+- Always test health endpoints first to ensure service is running
+- For authentication endpoints, use test credentials from seed data
+- For protected endpoints, extract token from login response and use it
+- Check response status codes: 200 for success, 401 for auth errors, 400 for validation errors, 500 for server errors
+- Verify response JSON structure matches expected format
+
+## Important Notes
+
+- Never skip verification steps after making changes
+- Always wait for docker services to be fully started before testing
+- If a test fails, check docker logs: `docker-compose logs <service-name>`
+- If services fail to start, check: `docker-compose ps` and `docker-compose logs`
+- Database must be healthy before backend services can start properly
+

@@ -66,7 +66,7 @@ func (s *SearchService) searchPosts(query string) ([]dto.PostResponse, error) {
 		Preload("Comments.User").
 		Preload("Likes").
 		Where("LOWER(content) LIKE ?", "%"+queryLower+"%").
-		Order("created_at DESC").
+		Order("createdAt DESC").
 		Find(&posts).Error; err != nil {
 		return nil, err
 	}

@@ -2,13 +2,15 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"log/slog"
 	"tinker-backend/internal/database"
 	"tinker-backend/internal/dto"
 	"tinker-backend/internal/utils"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"gorm.io/gorm"
 )
@@ -26,20 +28,29 @@ func NewAuthService(db *gorm.DB, jwtSecret string) *AuthService {
 }
 
 func (s *AuthService) ValidateUserCredentials(username, password string) (*database.User, error) {
+	slog.Info("Starting ValidateUserCredentials", "username", username)
 	var user database.User
+	slog.Info("Querying database for user", "username", username)
 	if err := s.db.Where("username = ?", username).First(&user).Error; err != nil {
+		slog.Error("Database query failed", "error", err, "errorType", fmt.Sprintf("%T", err), "username", username)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			slog.Warn("Login failed: user not found", "username", username)
 			return nil, errors.New("invalid credentials")
 		}
-		return nil, err
+		slog.Error("Database error in ValidateUserCredentials", "error", err, "username", username)
+		return nil, fmt.Errorf("database error: %w", err)
 	}
+	slog.Info("User found in database", "userId", user.ID, "username", user.Username)
 
-	if !utils.CheckPasswordHash(password, user.Password) {
+	slog.Info("Checking password hash", "username", username, "passwordLen", len(password), "hashLen", len(user.Password))
+	isValid := utils.CheckPasswordHash(password, user.Password)
+	slog.Info("Password check result", "username", username, "isValid", isValid)
+	if !isValid {
 		slog.Warn("Login failed: invalid password", "username", username)
 		return nil, errors.New("invalid credentials")
 	}
 
+	slog.Info("Password validated successfully", "username", username)
 	return &user, nil
 }
 
@@ -48,14 +59,21 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 
 	user, err := s.ValidateUserCredentials(req.Username, req.Password)
 	if err != nil {
+		slog.Error("ValidateUserCredentials failed", "error", err, "username", req.Username)
 		return nil, err
 	}
 
+	slog.Info("User validated", "userId", user.ID, "username", user.Username)
+
 	// Получаем список подписок
 	var follows []database.Follow
-	if err := s.db.Where("follower_id = ?", user.ID).Find(&follows).Error; err != nil {
-		return nil, err
+	slog.Info("Querying follows", "userId", user.ID)
+	if err := s.db.Table("Follow").Where(`"followerId" = ?`, user.ID).Find(&follows).Error; err != nil {
+		slog.Error("Failed to get follows", "error", err, "userId", user.ID, "errorType", fmt.Sprintf("%T", err), "errorString", err.Error())
+		return nil, fmt.Errorf("failed to get follows: %w", err)
 	}
+
+	slog.Info("Got follows", "count", len(follows), "userId", user.ID)
 
 	followingIDs := make([]string, len(follows))
 	for i, f := range follows {
@@ -86,4 +104,3 @@ func (s *AuthService) Login(req dto.LoginRequest) (*dto.AuthResponse, error) {
 		},
 	}, nil
 }
-

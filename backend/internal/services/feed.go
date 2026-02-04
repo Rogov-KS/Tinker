@@ -18,7 +18,7 @@ func NewFeedService(db *gorm.DB) *FeedService {
 func (s *FeedService) GetFeed(userID string) ([]dto.PostResponse, error) {
 	// Получаем список подписок
 	var follows []database.Follow
-	if err := s.db.Where("follower_id = ?", userID).Find(&follows).Error; err != nil {
+	if err := s.db.Where("followerId = ?", userID).Find(&follows).Error; err != nil {
 		return nil, err
 	}
 
@@ -37,8 +37,8 @@ func (s *FeedService) GetFeed(userID string) ([]dto.PostResponse, error) {
 		Preload("User").
 		Preload("Comments.User").
 		Preload("Likes").
-		Where("user_id IN ?", followingIDs).
-		Order("created_at DESC").
+		Where("userId IN ?", followingIDs).
+		Order("createdAt DESC").
 		Find(&posts).Error; err != nil {
 		return nil, err
 	}

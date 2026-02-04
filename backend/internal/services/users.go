@@ -21,7 +21,7 @@ func NewUsersService(db *gorm.DB) *UsersService {
 
 func (s *UsersService) GetAllUsers() ([]dto.UserResponse, error) {
 	var users []database.User
-	if err := s.db.Preload("Following").Order("created_at ASC").Find(&users).Error; err != nil {
+	if err := s.db.Preload("Following").Order("createdAt ASC").Find(&users).Error; err != nil {
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func (s *UsersService) FollowUser(followerID, followingID string) error {
 
 	// Проверяем, не подписан ли уже
 	var existing database.Follow
-	if err := s.db.Where("follower_id = ? AND following_id = ?", followerID, followingID).First(&existing).Error; err == nil {
+	if err := s.db.Where("followerId = ? AND followingId = ?", followerID, followingID).First(&existing).Error; err == nil {
 		// Уже подписан, просто возвращаем успех (идемпотентность)
 		return nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -148,12 +148,12 @@ func (s *UsersService) FollowUser(followerID, followingID string) error {
 }
 
 func (s *UsersService) UnfollowUser(followerID, followingID string) error {
-	return s.db.Where("follower_id = ? AND following_id = ?", followerID, followingID).Delete(&database.Follow{}).Error
+	return s.db.Where("followerId = ? AND followingId = ?", followerID, followingID).Delete(&database.Follow{}).Error
 }
 
 func (s *UsersService) GetFollowing(userID string) ([]dto.UserResponse, error) {
 	var follows []database.Follow
-	if err := s.db.Preload("Following").Preload("Following.Following").Where("follower_id = ?", userID).Find(&follows).Error; err != nil {
+	if err := s.db.Preload("Following").Preload("Following.Following").Where("followerId = ?", userID).Find(&follows).Error; err != nil {
 		return nil, err
 	}
 
@@ -171,8 +171,8 @@ func (s *UsersService) GetUserPosts(userID string) ([]dto.PostResponse, error) {
 		Preload("User").
 		Preload("Comments.User").
 		Preload("Likes").
-		Where("user_id = ?", userID).
-		Order("created_at DESC").
+		Where("userId = ?", userID).
+		Order("createdAt DESC").
 		Find(&posts).Error; err != nil {
 		return nil, err
 	}

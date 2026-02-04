@@ -24,7 +24,7 @@ func (s *PostsService) GetAllPosts(currentUserID *string) ([]dto.PostResponse, e
 		Preload("User").
 		Preload("Comments.User").
 		Preload("Likes").
-		Order("created_at DESC").
+		Order("createdAt DESC").
 		Find(&posts).Error; err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (s *PostsService) LikePost(userID, postID string) error {
 
 	// Проверяем, не лайкнул ли уже
 	var existing database.Like
-	if err := s.db.Where("user_id = ? AND post_id = ?", userID, postID).First(&existing).Error; err == nil {
+	if err := s.db.Where("userId = ? AND postId = ?", userID, postID).First(&existing).Error; err == nil {
 		// Уже лайкнул, просто возвращаем успех (идемпотентность)
 		return nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -83,15 +83,15 @@ func (s *PostsService) LikePost(userID, postID string) error {
 }
 
 func (s *PostsService) UnlikePost(userID, postID string) error {
-	return s.db.Where("user_id = ? AND post_id = ?", userID, postID).Delete(&database.Like{}).Error
+	return s.db.Where("userId = ? AND postId = ?", userID, postID).Delete(&database.Like{}).Error
 }
 
 func (s *PostsService) GetComments(postID string) ([]dto.CommentResponse, error) {
 	var comments []database.Comment
 	if err := s.db.
 		Preload("User").
-		Where("post_id = ?", postID).
-		Order("created_at DESC").
+		Where("postId = ?", postID).
+		Order("createdAt DESC").
 		Find(&comments).Error; err != nil {
 		return nil, err
 	}
