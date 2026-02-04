@@ -2,13 +2,15 @@ package services
 
 import (
 	"errors"
-	"log/slog"
+	"fmt"
 
-	"github.com/google/uuid"
-	"gorm.io/gorm"
+	"log/slog"
 	"tinker-backend/internal/database"
 	"tinker-backend/internal/dto"
 	"tinker-backend/internal/utils"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type UsersService struct {
@@ -16,52 +18,48 @@ type UsersService struct {
 }
 
 func NewUsersService(db *gorm.DB) *UsersService {
-	return &UsersService{db: db}
+	return &UsersService{
+		db: db,
+	}
 }
 
 func (s *UsersService) GetAllUsers() ([]dto.UserResponse, error) {
 	var users []database.User
-	if err := s.db.Preload("Following").Order("createdAt ASC").Find(&users).Error; err != nil {
-		return nil, err
+	if err := s.db.Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("failed to get users: %w", err)
 	}
 
-	result := make([]dto.UserResponse, len(users))
+	responses := make([]dto.UserResponse, len(users))
 	for i, user := range users {
-		result[i] = s.mapUserToDTO(&user)
-	}
-
-	return result, nil
-}
-
-func (s *UsersService) GetUserById(userID string) (*dto.UserResponse, error) {
-	var user database.User
-	if err := s.db.Preload("Following").Where("id = ?", userID).First(&user).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("user not found")
+		followingIDs, err := s.getFollowingIDs(user.ID)
+		if err != nil {
+			return nil, err
 		}
-		return nil, err
+		responses[i] = dto.UserResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Avatar:    user.Avatar,
+			Bio:       user.Bio,
+			Following: followingIDs,
+		}
 	}
 
-	result := s.mapUserToDTO(&user)
-	return &result, nil
+	return responses, nil
 }
 
 func (s *UsersService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse, error) {
-	slog.Info("Creating new user", "username", req.Username)
-
-	// Проверяем существование пользователя
-	var existing database.User
-	if err := s.db.Where("username = ?", req.Username).First(&existing).Error; err == nil {
-		slog.Warn("Username already exists", "username", req.Username)
+	// Проверяем, существует ли пользователь с таким username
+	var existingUser database.User
+	if err := s.db.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
 		return nil, errors.New("username already exists")
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+		return nil, fmt.Errorf("database error: %w", err)
 	}
 
 	// Хешируем пароль
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
 	// Создаем пользователя
@@ -72,46 +70,141 @@ func (s *UsersService) CreateUser(req dto.CreateUserRequest) (*dto.UserResponse,
 	}
 
 	if err := s.db.Create(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return &dto.UserResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Avatar:    user.Avatar,
+		Bio:       user.Bio,
+		Following: []string{},
+	}, nil
+}
+
+func (s *UsersService) GetUserById(userID string) (*dto.UserResponse, error) {
+	var user database.User
+	if err := s.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
+	followingIDs, err := s.getFollowingIDs(user.ID)
+	if err != nil {
 		return nil, err
 	}
 
-	slog.Info("User created successfully", "userId", user.ID, "username", user.Username)
-
-	result := s.mapUserToDTO(&user)
-	return &result, nil
+	return &dto.UserResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Avatar:    user.Avatar,
+		Bio:       user.Bio,
+		Following: followingIDs,
+	}, nil
 }
 
 func (s *UsersService) UpdateUser(userID string, req dto.UpdateUserRequest) (*dto.UserResponse, error) {
-	updates := make(map[string]interface{})
+	var user database.User
+	if err := s.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
 
-	if req.Username != nil {
-		// Проверяем уникальность username
-		var existing database.User
-		if err := s.db.Where("username = ? AND id != ?", *req.Username, userID).First(&existing).Error; err == nil {
+	// Проверяем уникальность username, если он изменяется
+	if req.Username != nil && *req.Username != user.Username {
+		var existingUser database.User
+		if err := s.db.Where("username = ? AND id != ?", *req.Username, userID).First(&existingUser).Error; err == nil {
 			return nil, errors.New("username already exists")
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, err
+			return nil, fmt.Errorf("database error: %w", err)
 		}
-		updates["username"] = *req.Username
+		user.Username = *req.Username
 	}
 
 	if req.Bio != nil {
-		updates["bio"] = *req.Bio
+		user.Bio = req.Bio
 	}
 
 	if req.Avatar != nil {
-		updates["avatar"] = *req.Avatar
+		user.Avatar = req.Avatar
 	}
 
-	if len(updates) == 0 {
-		return s.GetUserById(userID)
+	if err := s.db.Save(&user).Error; err != nil {
+		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
-	if err := s.db.Model(&database.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+	followingIDs, err := s.getFollowingIDs(user.ID)
+	if err != nil {
 		return nil, err
 	}
 
-	return s.GetUserById(userID)
+	return &dto.UserResponse{
+		ID:        user.ID,
+		Username:  user.Username,
+		Avatar:    user.Avatar,
+		Bio:       user.Bio,
+		Following: followingIDs,
+	}, nil
+}
+
+func (s *UsersService) GetUserPosts(userID string) ([]dto.PostResponse, error) {
+	// Проверяем, существует ли пользователь
+	var user database.User
+	if err := s.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
+	var posts []database.Post
+	if err := s.db.Where(`"userId" = ?`, userID).Order(`"createdAt" DESC`).Find(&posts).Error; err != nil {
+		return nil, fmt.Errorf("failed to get posts: %w", err)
+	}
+
+	responses := make([]dto.PostResponse, len(posts))
+	for i, post := range posts {
+		postResponse, err := s.buildPostResponse(&post, nil)
+		if err != nil {
+			return nil, err
+		}
+		responses[i] = *postResponse
+	}
+
+	return responses, nil
+}
+
+func (s *UsersService) CreatePost(userID string, req dto.CreatePostRequest) (*dto.PostResponse, error) {
+	// Проверяем, существует ли пользователь
+	var user database.User
+	if err := s.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
+	post := database.Post{
+		ID:      uuid.New().String(),
+		UserID:  userID,
+		Content: req.Content,
+	}
+
+	if err := s.db.Create(&post).Error; err != nil {
+		return nil, fmt.Errorf("failed to create post: %w", err)
+	}
+
+	// Загружаем пост с автором для ответа
+	var createdPost database.Post
+	if err := s.db.Where("id = ?", post.ID).Preload("User").First(&createdPost).Error; err != nil {
+		return nil, fmt.Errorf("failed to get created post: %w", err)
+	}
+
+	return s.buildPostResponse(&createdPost, &userID)
 }
 
 func (s *UsersService) FollowUser(followerID, followingID string) error {
@@ -119,22 +212,22 @@ func (s *UsersService) FollowUser(followerID, followingID string) error {
 		return errors.New("cannot follow yourself")
 	}
 
-	// Проверяем существование пользователя для подписки
-	var following database.User
-	if err := s.db.Where("id = ?", followingID).First(&following).Error; err != nil {
+	// Проверяем, существует ли пользователь для подписки
+	var followingUser database.User
+	if err := s.db.Where("id = ?", followingID).First(&followingUser).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("user not found")
 		}
-		return err
+		return fmt.Errorf("database error: %w", err)
 	}
 
 	// Проверяем, не подписан ли уже
-	var existing database.Follow
-	if err := s.db.Where("followerId = ? AND followingId = ?", followerID, followingID).First(&existing).Error; err == nil {
-		// Уже подписан, просто возвращаем успех (идемпотентность)
+	var existingFollow database.Follow
+	if err := s.db.Where(`"followerId" = ? AND "followingId" = ?`, followerID, followingID).First(&existingFollow).Error; err == nil {
+		// Уже подписан, ничего не делаем
 		return nil
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return err
+		return fmt.Errorf("database error: %w", err)
 	}
 
 	// Создаем подписку
@@ -144,133 +237,129 @@ func (s *UsersService) FollowUser(followerID, followingID string) error {
 		FollowingID: followingID,
 	}
 
-	return s.db.Create(&follow).Error
+	if err := s.db.Create(&follow).Error; err != nil {
+		return fmt.Errorf("failed to create follow: %w", err)
+	}
+
+	return nil
 }
 
 func (s *UsersService) UnfollowUser(followerID, followingID string) error {
-	return s.db.Where("followerId = ? AND followingId = ?", followerID, followingID).Delete(&database.Follow{}).Error
+	result := s.db.Where(`"followerId" = ? AND "followingId" = ?`, followerID, followingID).Delete(&database.Follow{})
+	if result.Error != nil {
+		return fmt.Errorf("failed to unfollow user: %w", result.Error)
+	}
+	return nil
 }
 
 func (s *UsersService) GetFollowing(userID string) ([]dto.UserResponse, error) {
+	// Проверяем, существует ли пользователь
+	var user database.User
+	if err := s.db.Where("id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, fmt.Errorf("database error: %w", err)
+	}
+
 	var follows []database.Follow
-	if err := s.db.Preload("Following").Preload("Following.Following").Where("followerId = ?", userID).Find(&follows).Error; err != nil {
-		return nil, err
+	if err := s.db.Where(`"followerId" = ?`, userID).Preload("Following").Find(&follows).Error; err != nil {
+		return nil, fmt.Errorf("failed to get follows: %w", err)
 	}
 
-	result := make([]dto.UserResponse, len(follows))
-	for i, f := range follows {
-		result[i] = s.mapUserToDTO(&f.Following)
-	}
-
-	return result, nil
-}
-
-func (s *UsersService) GetUserPosts(userID string) ([]dto.PostResponse, error) {
-	var posts []database.Post
-	if err := s.db.
-		Preload("User").
-		Preload("Comments.User").
-		Preload("Likes").
-		Where("userId = ?", userID).
-		Order("createdAt DESC").
-		Find(&posts).Error; err != nil {
-		return nil, err
-	}
-
-	result := make([]dto.PostResponse, len(posts))
-	for i := range posts {
-		result[i] = s.mapPostToDTO(&posts[i], &userID)
-	}
-
-	return result, nil
-}
-
-func (s *UsersService) CreatePost(userID string, req dto.CreatePostRequest) (*dto.PostResponse, error) {
-	slog.Info("Creating post for user", "userId", userID)
-
-	post := database.Post{
-		ID:      uuid.New().String(),
-		UserID:  userID,
-		Content: req.Content,
-	}
-
-	if err := s.db.Create(&post).Error; err != nil {
-		return nil, err
-	}
-
-	// Загружаем с отношениями
-	var createdPost database.Post
-	if err := s.db.
-		Preload("User").
-		Preload("Comments.User").
-		Preload("Likes").
-		Where("id = ?", post.ID).
-		First(&createdPost).Error; err != nil {
-		return nil, err
-	}
-
-	slog.Info("Post created", "postId", post.ID, "userId", userID)
-
-	result := s.mapPostToDTO(&createdPost, &userID)
-	return &result, nil
-}
-
-func (s *UsersService) mapUserToDTO(user *database.User) dto.UserResponse {
-	followingIDs := make([]string, 0)
-	if user.Following != nil {
-		for _, f := range user.Following {
-			followingIDs = append(followingIDs, f.FollowingID)
+	responses := make([]dto.UserResponse, len(follows))
+	for i, follow := range follows {
+		followingIDs, err := s.getFollowingIDs(follow.FollowingID)
+		if err != nil {
+			return nil, err
+		}
+		responses[i] = dto.UserResponse{
+			ID:        follow.Following.ID,
+			Username:  follow.Following.Username,
+			Avatar:    follow.Following.Avatar,
+			Bio:       follow.Following.Bio,
+			Following: followingIDs,
 		}
 	}
 
-	return dto.UserResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Avatar:    user.Avatar,
-		Bio:       user.Bio,
-		Following: followingIDs,
-	}
+	return responses, nil
 }
 
-func (s *UsersService) mapPostToDTO(post *database.Post, currentUserID *string) dto.PostResponse {
-	comments := make([]dto.CommentResponse, len(post.Comments))
-	for i, c := range post.Comments {
-		comments[i] = dto.CommentResponse{
-			ID:        c.ID,
-			UserID:    c.UserID,
-			Content:   c.Content,
-			CreatedAt: c.CreatedAt,
+// Вспомогательные методы
+
+func (s *UsersService) getFollowingIDs(userID string) ([]string, error) {
+	var follows []database.Follow
+	if err := s.db.Where(`"followerId" = ?`, userID).Find(&follows).Error; err != nil {
+		return nil, fmt.Errorf("failed to get follows: %w", err)
+	}
+
+	followingIDs := make([]string, len(follows))
+	for i, f := range follows {
+		followingIDs[i] = f.FollowingID
+	}
+
+	return followingIDs, nil
+}
+
+func (s *UsersService) buildPostResponse(post *database.Post, currentUserID *string) (*dto.PostResponse, error) {
+	// Загружаем автора, если не загружен
+	if post.User.ID == "" {
+		if err := s.db.Model(post).Association("User").Find(&post.User); err != nil {
+			slog.Error("Failed to load post author", "error", err, "postId", post.ID)
+		}
+	}
+
+	// Подсчитываем лайки
+	var likesCount int64
+	if err := s.db.Model(&database.Like{}).Where(`"postId" = ?`, post.ID).Count(&likesCount).Error; err != nil {
+		return nil, fmt.Errorf("failed to count likes: %w", err)
+	}
+
+	// Проверяем, лайкнул ли текущий пользователь
+	likedByCurrentUser := false
+	if currentUserID != nil {
+		var like database.Like
+		if err := s.db.Where(`"postId" = ? AND "userId" = ?`, post.ID, *currentUserID).First(&like).Error; err == nil {
+			likedByCurrentUser = true
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("failed to check like: %w", err)
+		}
+	}
+
+	// Загружаем комментарии
+	var comments []database.Comment
+	if err := s.db.Where(`"postId" = ?`, post.ID).Order(`"createdAt" ASC`).Preload("User").Find(&comments).Error; err != nil {
+		return nil, fmt.Errorf("failed to get comments: %w", err)
+	}
+
+	commentResponses := make([]dto.CommentResponse, len(comments))
+	for i, comment := range comments {
+		commentResponses[i] = dto.CommentResponse{
+			ID:        comment.ID,
+			UserID:    comment.UserID,
+			Content:   comment.Content,
+			CreatedAt: comment.CreatedAt,
 			Author: dto.AuthorResponse{
-				ID:       c.User.ID,
-				Username: c.User.Username,
-				Avatar:   c.User.Avatar,
+				ID:       comment.User.ID,
+				Username: comment.User.Username,
+				Avatar:   comment.User.Avatar,
 			},
 		}
 	}
 
-	likedByCurrentUser := false
-	if currentUserID != nil {
-		for _, like := range post.Likes {
-			if like.UserID == *currentUserID {
-				likedByCurrentUser = true
-				break
-			}
-		}
-	}
-
-	return dto.PostResponse{
-		ID:               post.ID,
-		UserID:           post.UserID,
+	return &dto.PostResponse{
+		ID:                 post.ID,
+		UserID:             post.UserID,
 		Author: dto.AuthorResponse{
 			ID:       post.User.ID,
 			Username: post.User.Username,
 			Avatar:   post.User.Avatar,
 		},
-		Content:          post.Content,
-		Likes:            len(post.Likes),
+		Content:            post.Content,
+		Likes:              int(likesCount),
 		LikedByCurrentUser: likedByCurrentUser,
-		CreatedAt:        post.CreatedAt,
-		Comments:         comments,
-	}
+		CreatedAt:          post.CreatedAt,
+		Comments:           commentResponses,
+	}, nil
 }
 

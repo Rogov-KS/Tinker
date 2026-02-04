@@ -2,9 +2,11 @@ package services
 
 import (
 	"errors"
+	"fmt"
+
+	"tinker-backend/internal/database"
 
 	"gorm.io/gorm"
-	"tinker-backend/internal/database"
 )
 
 type CommentsService struct {
@@ -12,7 +14,9 @@ type CommentsService struct {
 }
 
 func NewCommentsService(db *gorm.DB) *CommentsService {
-	return &CommentsService{db: db}
+	return &CommentsService{
+		db: db,
+	}
 }
 
 func (s *CommentsService) DeleteComment(userID, commentID string) error {
@@ -21,13 +25,17 @@ func (s *CommentsService) DeleteComment(userID, commentID string) error {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("comment not found")
 		}
-		return err
+		return fmt.Errorf("database error: %w", err)
 	}
 
 	if comment.UserID != userID {
 		return errors.New("you can only delete your own comments")
 	}
 
-	return s.db.Delete(&comment).Error
+	if err := s.db.Delete(&comment).Error; err != nil {
+		return fmt.Errorf("failed to delete comment: %w", err)
+	}
+
+	return nil
 }
 

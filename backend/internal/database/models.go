@@ -5,11 +5,11 @@ import (
 )
 
 type User struct {
-	ID        string    `gorm:"type:text;primaryKey" json:"id"`
-	Username  string    `gorm:"type:text;uniqueIndex;not null" json:"username"`
-	Password  string    `gorm:"type:text;not null" json:"-"` // Исключаем из JSON
-	Avatar    *string   `gorm:"type:text" json:"avatar,omitempty"`
-	Bio       *string   `gorm:"type:text" json:"bio,omitempty"`
+	ID        string    `gorm:"type:text;column:id;primaryKey" json:"id"`
+	Username  string    `gorm:"type:text;column:username;uniqueIndex;not null" json:"username"`
+	Password  string    `gorm:"type:text;column:password;not null" json:"-"` // Исключаем из JSON
+	Avatar    *string   `gorm:"type:text;column:avatar" json:"avatar,omitempty"`
+	Bio       *string   `gorm:"type:text;column:bio" json:"bio,omitempty"`
 	CreatedAt time.Time `gorm:"column:createdAt;autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updatedAt;autoUpdateTime" json:"updatedAt"`
 
@@ -22,9 +22,9 @@ type User struct {
 }
 
 type Post struct {
-	ID        string    `gorm:"type:text;primaryKey" json:"id"`
+	ID        string    `gorm:"type:text;column:id;primaryKey" json:"id"`
 	UserID    string    `gorm:"type:text;column:userId;not null;index" json:"userId"`
-	Content   string    `gorm:"type:text;not null" json:"content"`
+	Content   string    `gorm:"type:text;column:content;not null" json:"content"`
 	CreatedAt time.Time `gorm:"column:createdAt;autoCreateTime;index" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updatedAt;autoUpdateTime" json:"updatedAt"`
 
@@ -35,10 +35,10 @@ type Post struct {
 }
 
 type Comment struct {
-	ID        string    `gorm:"type:text;primaryKey" json:"id"`
+	ID        string    `gorm:"type:text;column:id;primaryKey" json:"id"`
 	UserID    string    `gorm:"type:text;column:userId;not null;index" json:"userId"`
 	PostID    string    `gorm:"type:text;column:postId;not null;index" json:"postId"`
-	Content   string    `gorm:"type:text;not null" json:"content"`
+	Content   string    `gorm:"type:text;column:content;not null" json:"content"`
 	CreatedAt time.Time `gorm:"column:createdAt;autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updatedAt;autoUpdateTime" json:"updatedAt"`
 
@@ -48,7 +48,7 @@ type Comment struct {
 }
 
 type Like struct {
-	ID        string    `gorm:"type:text;primaryKey" json:"id"`
+	ID        string    `gorm:"type:text;column:id;primaryKey" json:"id"`
 	UserID    string    `gorm:"type:text;column:userId;not null;index" json:"userId"`
 	PostID    string    `gorm:"type:text;column:postId;not null;index" json:"postId"`
 	CreatedAt time.Time `gorm:"column:createdAt;autoCreateTime" json:"createdAt"`
@@ -59,7 +59,7 @@ type Like struct {
 }
 
 type Follow struct {
-	ID          string    `gorm:"type:text;primaryKey" json:"id"`
+	ID          string    `gorm:"type:text;column:id;primaryKey" json:"id"`
 	FollowerID  string    `gorm:"type:text;column:followerId;not null;index" json:"followerId"`
 	FollowingID string    `gorm:"type:text;column:followingId;not null;index" json:"followingId"`
 	CreatedAt   time.Time `gorm:"column:createdAt;autoCreateTime" json:"createdAt"`

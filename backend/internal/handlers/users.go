@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"net/http"
 
 	"tinker-backend/internal/dto"
@@ -32,7 +33,8 @@ func NewUsersHandler(usersService *services.UsersService) *UsersHandler {
 func (h *UsersHandler) GetAllUsers(c *gin.Context) {
 	users, err := h.usersService.GetAllUsers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		slog.Error("GetAllUsers failed", "error", err, "errorString", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get users", "details": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, users)
@@ -154,12 +156,18 @@ func (h *UsersHandler) UpdateUser(c *gin.Context) {
 // @Produce      json
 // @Param        userId   path      string  true  "User ID"
 // @Success      200      {array}   dto.PostResponse
+// @Failure      404      {object}  map[string]string
 // @Router       /users/{userId}/posts [get]
 func (h *UsersHandler) GetUserPosts(c *gin.Context) {
 	userID := c.Param("userId")
 	posts, err := h.usersService.GetUserPosts(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		slog.Error("GetUserPosts failed", "error", err, "userId", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user posts"})
 		return
 	}
 	c.JSON(http.StatusOK, posts)
@@ -219,9 +227,14 @@ func (h *UsersHandler) CreatePost(c *gin.Context) {
 // @Router       /users/{userId}/follow [post]
 func (h *UsersHandler) FollowUser(c *gin.Context) {
 	userID := c.Param("userId")
-	currentUserID, _ := c.Get("userId")
+	currentUserID, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	currentUserIDStr := currentUserID.(string)
 
-	err := h.usersService.FollowUser(currentUserID.(string), userID)
+	err := h.usersService.FollowUser(currentUserIDStr, userID)
 	if err != nil {
 		if err.Error() == "cannot follow yourself" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot follow yourself"})
@@ -231,11 +244,11 @@ func (h *UsersHandler) FollowUser(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		slog.Error("FollowUser failed", "error", err, "followerID", currentUserIDStr, "followingID", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to follow user"})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "User followed"})
+	c.JSON(http.StatusOK, gin.H{"message": "User followed successfully"})
 }
 
 // UnfollowUser godoc
@@ -245,17 +258,23 @@ func (h *UsersHandler) FollowUser(c *gin.Context) {
 // @Param        userId   path      string  true  "User ID to unfollow"
 // @Security     BearerAuth
 // @Success      204
+// @Failure      401      {object}  map[string]string
 // @Router       /users/{userId}/follow [delete]
 func (h *UsersHandler) UnfollowUser(c *gin.Context) {
 	userID := c.Param("userId")
-	currentUserID, _ := c.Get("userId")
-
-	err := h.usersService.UnfollowUser(currentUserID.(string), userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+	currentUserID, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	currentUserIDStr := currentUserID.(string)
 
+	err := h.usersService.UnfollowUser(currentUserIDStr, userID)
+	if err != nil {
+		slog.Error("UnfollowUser failed", "error", err, "followerID", currentUserIDStr, "followingID", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unfollow user"})
+		return
+	}
 	c.Status(http.StatusNoContent)
 }
 
@@ -266,12 +285,18 @@ func (h *UsersHandler) UnfollowUser(c *gin.Context) {
 // @Produce      json
 // @Param        userId   path      string  true  "User ID"
 // @Success      200      {array}   dto.UserResponse
+// @Failure      404      {object}  map[string]string
 // @Router       /users/{userId}/following [get]
 func (h *UsersHandler) GetFollowing(c *gin.Context) {
 	userID := c.Param("userId")
 	following, err := h.usersService.GetFollowing(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		if err.Error() == "user not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		slog.Error("GetFollowing failed", "error", err, "userId", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get following list"})
 		return
 	}
 	c.JSON(http.StatusOK, following)

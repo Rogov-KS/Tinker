@@ -2,12 +2,15 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 )
 
 var DB *gorm.DB
@@ -15,11 +18,28 @@ var DB *gorm.DB
 func Connect(databaseURL string) error {
 	var err error
 
-	// Настройка GORM logger
-	gormLogger := logger.Default.LogMode(logger.Silent) // Отключаем GORM логи, используем slog
+	// Настройка GORM logger с детальным логированием SQL
+	gormLogger := logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             time.Second,
+			LogLevel:                  logger.Info,
+			IgnoreRecordNotFoundError: false,
+			Colorful:                  false,
+		},
+	)
+
+	// NamingStrategy который сохраняет точные имена колонок из gorm тегов
+	namingStrategy := schema.NamingStrategy{
+		TablePrefix:   "",
+		SingularTable: false,
+		NameReplacer:  nil,
+		NoLowerCase:   true, // Не преобразуем в lowercase
+	}
 
 	DB, err = gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: gormLogger,
+		Logger:          gormLogger,
+		NamingStrategy: namingStrategy,
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
