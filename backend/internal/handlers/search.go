@@ -25,7 +25,7 @@ func NewSearchHandler(searchService *services.SearchService) *SearchHandler {
 // @Produce      json
 // @Param        query   query     string  true  "Search query"
 // @Param        type    query     string  true  "Search type (users or posts)"  Enums(users, posts)
-// @Success      200     {object}  map[string]interface{}
+// @Success      200     {array}   object
 // @Failure      400     {object}  map[string]string
 // @Router       /search [get]
 func (h *SearchHandler) Search(c *gin.Context) {

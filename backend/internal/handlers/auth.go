@@ -29,7 +29,7 @@ func NewAuthHandler(authService *services.AuthService) *AuthHandler {
 // @Accept       json
 // @Produce      json
 // @Param        request  body      dto.LoginRequest  true  "Login credentials"
-// @Success      200      {object}  dto.AuthResponse
+// @Success      201      {object}  dto.AuthResponse
 // @Failure      400      {object}  map[string]string
 // @Failure      401      {object}  map[string]string
 // @Router       /auth/login [post]
@@ -55,5 +55,5 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusCreated, response)
 }

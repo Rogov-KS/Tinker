@@ -17,22 +17,22 @@ services:
       retries: 5
     restart: unless-stopped
 
-  backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    container_name: t-news-backend
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tnews
-      JWT_SECRET: ${JWT_SECRET:-dev-secret}
-      NODE_ENV: production
-      SEED_DB: ${SEED_DB:-true}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
+  # backend:
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   container_name: t-news-backend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tnews
+  #     JWT_SECRET: ${JWT_SECRET:-dev-secret}
+  #     NODE_ENV: production
+  #     SEED_DB: ${SEED_DB:-true}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
 
   db-migrate:
     image: migrate/migrate:latest
@@ -71,9 +71,9 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:3000/api
+        VITE_API_URL: http://localhost:3001/api
     depends_on:
-      backend:
+      backend2:
         condition: service_started
     restart: unless-stopped
 

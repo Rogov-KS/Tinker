@@ -21,7 +21,7 @@ func NewSearchService(db *gorm.DB) *SearchService {
 	}
 }
 
-func (s *SearchService) Search(query, searchType string) (map[string]interface{}, error) {
+func (s *SearchService) Search(query, searchType string) (interface{}, error) {
 	if searchType != "users" && searchType != "posts" {
 		return nil, errors.New("invalid type")
 	}
@@ -54,9 +54,8 @@ func (s *SearchService) Search(query, searchType string) (map[string]interface{}
 			}
 		}
 
-		return map[string]interface{}{
-			"users": responses,
-		}, nil
+		// Return array directly to match NestJS format
+		return responses, nil
 	}
 
 	// searchType == "posts"
@@ -77,9 +76,8 @@ func (s *SearchService) Search(query, searchType string) (map[string]interface{}
 		responses[i] = *postResponse
 	}
 
-	return map[string]interface{}{
-		"posts": responses,
-	}, nil
+	// Return array directly to match NestJS format
+	return responses, nil
 }
 
 func (s *SearchService) getFollowingIDs(userID string) ([]string, error) {
@@ -143,8 +141,8 @@ func (s *SearchService) buildPostResponse(post *database.Post, currentUserID *st
 	}
 
 	return &dto.PostResponse{
-		ID:                 post.ID,
-		UserID:             post.UserID,
+		ID:     post.ID,
+		UserID: post.UserID,
 		Author: dto.AuthorResponse{
 			ID:       post.User.ID,
 			Username: post.User.Username,
@@ -157,4 +155,3 @@ func (s *SearchService) buildPostResponse(post *database.Post, currentUserID *st
 		Comments:           commentResponses,
 	}, nil
 }
-
