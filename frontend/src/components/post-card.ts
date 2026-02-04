@@ -68,7 +68,7 @@ export function createPostCard(
   })
   const updateLikeButton = () => {
     likeButton.classList.toggle('active', liked)
-    likeButton.textContent = `${liked ? '💛' : '🤍'} ${likesCount}`
+    likeButton.innerHTML = `${liked ? '❤️' : '🤍'} ${likesCount}`
   }
   updateLikeButton()
 
@@ -109,11 +109,16 @@ export function createPostCard(
   let commentsLoaded = false
 
   commentsButton.addEventListener('click', async () => {
+    const wasHidden = commentsSection.classList.contains('hidden')
     commentsSection.classList.toggle('hidden')
     if (!commentsLoaded && !commentsSection.classList.contains('hidden')) {
       const comments = await fetchComments(post.id)
       updateCommentsButton(comments.length)
       renderComments(commentsSection, comments, post.id, () => {
+        // Не сворачиваем блок комментариев при обновлении
+        if (!wasHidden) {
+          commentsSection.classList.remove('hidden')
+        }
         options.onRefresh?.()
       })
       commentsLoaded = true
@@ -138,6 +143,8 @@ function renderComments(
   onRefresh?: () => void
 ) {
   container.innerHTML = ''
+  // Убеждаемся, что блок комментариев открыт
+  container.classList.remove('hidden')
 
   const list = createElement('div', { className: 'comments-list' })
   comments.forEach((comment) => {
@@ -148,6 +155,8 @@ function renderComments(
       if (button && button.textContent?.startsWith('Комментарии')) {
         button.textContent = `Комментарии (${count})`
       }
+      // Не сворачиваем блок при удалении комментария
+      container.classList.remove('hidden')
       onRefresh?.()
     }))
   })
@@ -160,6 +169,8 @@ function renderComments(
     if (button && button.textContent?.startsWith('Комментарии')) {
       button.textContent = `Комментарии (${count})`
     }
+    // Не сворачиваем блок при добавлении комментария
+    container.classList.remove('hidden')
     onRefresh?.()
   }))
 }

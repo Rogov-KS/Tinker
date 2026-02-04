@@ -30,7 +30,16 @@ const routes: RouteConfig[] = [
       return renderProfilePage(state.user.id)
     }
   } },
-  { pattern: /^#\/search$/, auth: true, handler: () => renderSearchPage() },
+  { 
+    pattern: /^#\/search(\?.*)?$/, 
+    auth: false, 
+    handler: () => {
+      const url = new URL(window.location.href)
+      const query = url.searchParams.get('query') || ''
+      const type = (url.searchParams.get('type') || 'users') as 'users' | 'posts'
+      renderSearchPage(query, type)
+    }
+  },
   { pattern: /^#\/settings$/, auth: true, handler: () => renderSettingsPage() },
 ]
 

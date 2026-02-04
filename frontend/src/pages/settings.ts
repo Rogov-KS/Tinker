@@ -1,9 +1,10 @@
-import { updateProfile } from '../api'
+import { updateProfile, fetchFollowing, unfollowUser } from '../api'
 import { renderWithShell } from '../layout'
 import { getState, updateCurrentUser } from '../state'
-import { createElement } from '../utils/dom'
+import { createElement, createAvatar } from '../utils/dom'
+import { navigateTo } from '../router'
 
-export function renderSettingsPage() {
+export async function renderSettingsPage() {
   const state = getState()
   if (!state.user) {
     renderWithShell(
@@ -62,7 +63,70 @@ export function renderSettingsPage() {
   container.appendChild(status)
   container.appendChild(form)
 
+  // Секция подписок
+  const followingSection = createElement('div', { className: 'following-section' })
+  const followingTitle = createElement('h2', { text: 'Мои подписки' })
+  followingSection.appendChild(followingTitle)
+  
+  const followingList = createElement('div', { className: 'following-list' })
+  followingList.appendChild(createElement('p', { className: 'muted', text: 'Загрузка...' }))
+  followingSection.appendChild(followingList)
+  
+  container.appendChild(followingSection)
+
   renderWithShell(container)
+
+  // Загружаем подписки
+  try {
+    const following = await fetchFollowing(currentUser.id)
+    followingList.innerHTML = ''
+    if (following.length === 0) {
+      followingList.appendChild(
+        createElement('p', { className: 'muted', text: 'Вы пока ни на кого не подписаны' })
+      )
+    } else {
+      following.forEach((user) => {
+        const item = createElement('div', { className: 'following-item' })
+        const avatar = createAvatar(user.username, user.avatar, 'small')
+        avatar.style.cursor = 'pointer'
+        avatar.addEventListener('click', () => navigateTo(`#/profile/${user.id}`))
+        
+        const info = createElement('div', { className: 'following-info' })
+        const username = createElement('strong', { text: user.username })
+        username.style.cursor = 'pointer'
+        username.addEventListener('click', () => navigateTo(`#/profile/${user.id}`))
+        info.appendChild(username)
+        
+        const unfollowBtn = createElement('button', {
+          className: 'ghost-button tiny',
+          text: 'Отписаться',
+        })
+        unfollowBtn.addEventListener('click', async () => {
+          if (confirm(`Отписаться от ${user.username}?`)) {
+            try {
+              await unfollowUser(user.id)
+              renderSettingsPage() // Перезагружаем страницу
+            } catch (error) {
+              alert((error as Error).message)
+            }
+          }
+        })
+        
+        item.appendChild(avatar)
+        item.appendChild(info)
+        item.appendChild(unfollowBtn)
+        followingList.appendChild(item)
+      })
+    }
+  } catch (error) {
+    followingList.innerHTML = ''
+    followingList.appendChild(
+      createElement('p', {
+        className: 'error-text',
+        text: (error as Error).message,
+      })
+    )
+  }
 }
 
 

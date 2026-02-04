@@ -5,20 +5,20 @@ import { createPostCard } from '../components/post-card'
 import { navigateTo } from '../router'
 import type { Post, User } from '../types'
 
-export function renderSearchPage() {
+export function renderSearchPage(initialQuery: string = '', initialType: 'users' | 'posts' = 'users') {
   const container = createElement('div', { className: 'page-section' })
   const title = createElement('h1', { text: 'Поиск' })
   const form = document.createElement('form')
   form.className = 'search-form'
   form.innerHTML = `
-    <input type="text" name="query" placeholder="Кого или что ищем?" required />
+    <input type="text" name="query" placeholder="Кого или что ищем?" value="${initialQuery}" />
     <div class="toggle-group">
       <label>
-        <input type="radio" name="type" value="users" checked />
+        <input type="radio" name="type" value="users" ${initialType === 'users' ? 'checked' : ''} />
         <span>Пользователи</span>
       </label>
       <label>
-        <input type="radio" name="type" value="posts" />
+        <input type="radio" name="type" value="posts" ${initialType === 'posts' ? 'checked' : ''} />
         <span>Посты</span>
       </label>
     </div>
@@ -29,6 +29,31 @@ export function renderSearchPage() {
   `
 
   const results = createElement('div', { className: 'search-results' })
+  
+  // Автоматический поиск при переключении радиобаттона
+  const radioButtons = form.querySelectorAll('input[type="radio"][name="type"]')
+  radioButtons.forEach((radio) => {
+    radio.addEventListener('change', async () => {
+      const formData = new FormData(form)
+      const query = String(formData.get('query') || '').trim()
+      const type = formData.get('type') === 'posts' ? 'posts' : 'users'
+      if (query) {
+        results.innerHTML = '<p class="muted">Поиск...</p>'
+        try {
+          const data = await searchEntities(query, type)
+          renderResults(results, data, type)
+        } catch (error) {
+          results.innerHTML = ''
+          results.appendChild(
+            createElement('p', {
+              className: 'error-text',
+              text: (error as Error).message,
+            })
+          )
+        }
+      }
+    })
+  })
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault()
@@ -80,6 +105,24 @@ export function renderSearchPage() {
   container.appendChild(results)
 
   renderWithShell(container)
+  
+  // Автоматический поиск при наличии начального запроса
+  if (initialQuery) {
+    results.innerHTML = '<p class="muted">Поиск...</p>'
+    searchEntities(initialQuery, initialType)
+      .then((data) => {
+        renderResults(results, data, initialType)
+      })
+      .catch((error) => {
+        results.innerHTML = ''
+        results.appendChild(
+          createElement('p', {
+            className: 'error-text',
+            text: (error as Error).message,
+          })
+        )
+      })
+  }
 }
 
 function renderResults(
@@ -108,9 +151,11 @@ function renderResults(
     })
     container.appendChild(list)
   } else {
+    const postsList = createElement('div', { className: 'post-list' })
     ;(data as Post[]).forEach((post) => {
-      container.appendChild(createPostCard(post))
+      postsList.appendChild(createPostCard(post))
     })
+    container.appendChild(postsList)
   }
 }
 

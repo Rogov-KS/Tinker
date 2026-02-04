@@ -1,6 +1,7 @@
-import { signup } from '../api'
+import { signup, login } from '../api'
 import { renderWithShell } from '../layout'
 import { navigateTo } from '../router'
+import { setAuth } from '../state'
 import { createElement } from '../utils/dom'
 
 export function renderSignupPage() {
@@ -50,9 +51,17 @@ export function renderSignupPage() {
 
     try {
       await signup(username, password)
-      successBox.textContent = 'Успешно! Теперь войдите в систему.'
-      successBox.classList.remove('hidden')
-      setTimeout(() => navigateTo('#/login'), 800)
+      // Автоматически входим после успешной регистрации
+      try {
+        const { token, user } = await login(username, password)
+        setAuth(token, user)
+        navigateTo('#/feed')
+      } catch (loginError) {
+        // Если автоматический вход не удался, показываем сообщение об успехе
+        successBox.textContent = 'Успешно! Теперь войдите в систему.'
+        successBox.classList.remove('hidden')
+        setTimeout(() => navigateTo('#/login'), 800)
+      }
     } catch (error) {
       errorBox.textContent = (error as Error).message
       errorBox.classList.remove('hidden')
